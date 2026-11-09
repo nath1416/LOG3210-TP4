@@ -1,0 +1,11 @@
+t0 = a + b
+t1 = c * d
+if t0 goto L1
+t1 = a - b
+t2 = t0 + t1
+L1
+t1 = t0 * d
+t2 = t0 + t1
+
+return t2
+

@@ -1,0 +1,55 @@
+// Bloc 0
+t0 = a + b
+// Avail_IN  : []
+// Avail_OUT : [a+b]
+
+// Bloc 1
+t1 = c * d
+// Avail_IN  : [a+b]
+// Avail_OUT : [a+b, c*d]
+
+// Bloc 2
+a = e - f
+// Avail_IN  : [a+b, c*d]
+// Avail_OUT : [c*d, e-f]
+
+// Bloc 3
+if t0 goto L1
+// Avail_IN  : [c*d, e-f]
+// Avail_OUT : [c*d, e-f]
+
+// Bloc 4
+t2 = a
+// Avail_IN  : [c*d, e-f]
+// Avail_OUT : [c*d, e-f]
+
+// Bloc 5
+e = a + b
+// Avail_IN  : [c*d, e-f]
+// Avail_OUT : [a+b, c*d]
+
+// Bloc 6
+if t1 goto L2
+// Avail_IN  : [c*d]
+// Avail_OUT : [c*d]
+
+// Bloc 7
+c = e - f
+// Avail_IN  : [c*d]
+// Avail_OUT : [e-f]
+
+// Bloc 8
+t4 = a + b
+// Avail_IN  : []
+// Avail_OUT : [a+b]
+
+// Bloc 9
+t5 = c * d
+// Avail_IN  : [a+b]
+// Avail_OUT : [a+b, c*d]
+
+// Bloc 10
+t6 = e - f
+// Avail_IN  : [a+b, c*d]
+// Avail_OUT : [a+b, c*d, e-f]
+

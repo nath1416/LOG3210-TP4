@@ -1,0 +1,61 @@
+// Bloc 0
+t0 = a + b
+// ValDef_IN  : []
+// ValDef_OUT : [d_0]
+
+// Bloc 1
+t1 = c * d
+// ValDef_IN  : [d_0]
+// ValDef_OUT : [d_0, d_1]
+
+// Bloc 2
+t2 = e - f
+// ValDef_IN  : [d_0, d_1]
+// ValDef_OUT : [d_0, d_1, d_2]
+
+// Bloc 3
+if t0 goto L1
+// ValDef_IN  : [d_0, d_1, d_2]
+// ValDef_OUT : [d_0, d_1, d_2, d_3]
+
+// Bloc 4
+t0 = e - f
+// ValDef_IN  : [d_0, d_1, d_2, d_3]
+// ValDef_OUT : [d_1, d_2, d_3, d_4]
+
+// Bloc 5
+t1 = t0 + t2
+// ValDef_IN  : [d_1, d_2, d_3, d_4]
+// ValDef_OUT : [d_2, d_3, d_4, d_5]
+
+// Bloc 6
+if t1 goto L2
+// ValDef_IN  : [d_0, d_1, d_2, d_3, d_4, d_5]
+// ValDef_OUT : [d_0, d_1, d_2, d_4, d_5, d_6]
+
+// Bloc 7
+t1 = c * d
+// ValDef_IN  : [d_0, d_1, d_2, d_4, d_5, d_6]
+// ValDef_OUT : [d_0, d_2, d_4, d_6, d_7]
+
+// Bloc 8
+t2 = t0 + t1
+// ValDef_IN  : [d_0, d_2, d_4, d_6, d_7]
+// ValDef_OUT : [d_0, d_4, d_6, d_7, d_8]
+
+// Bloc 9
+t0 = t1 + t2
+// ValDef_IN  : [d_0, d_1, d_2, d_4, d_5, d_6, d_7, d_8]
+// ValDef_OUT : [d_1, d_2, d_5, d_6, d_7, d_8, d_9]
+
+// Bloc 10
+t2 = a + b
+// ValDef_IN  : [d_1, d_2, d_5, d_6, d_7, d_8, d_9]
+// ValDef_OUT : [d_1, d_10, d_5, d_6, d_7, d_9]
+
+###############################################
+Optimised code:
+d_7: t1 = c * d
+d_9: t0 = d_7 + d_10
+d_10: t2 = a + b
+###############################################

@@ -1,0 +1,16 @@
+t0 = a + b
+t1 = c * d
+a = e - f
+if t0 goto L1
+t2 = e - f
+e = a + b
+L1
+if t1 goto L2
+c = e - f
+L2
+t4 = a + b
+t5 = c * d
+t6 = e - f
+
+return
+

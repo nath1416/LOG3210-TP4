@@ -1,0 +1,13 @@
+t0 = a + b
+t1 = c * d
+t2 = t0 + t1
+if t2 goto L1
+t0 = 1
+t0 = 2
+t2 = t0 + t1
+L1
+t1 = 3
+t2 = t0 + t1
+
+return t1
+
