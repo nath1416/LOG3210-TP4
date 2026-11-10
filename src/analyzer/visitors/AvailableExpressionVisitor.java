@@ -196,11 +196,16 @@ public class AvailableExpressionVisitor implements ParserVisitor {
             node = worklist.removeFirst();
 
             // OUT [ node ] = GEN [ node ] ∪ ( IN [ node ] - KILL [ node ])
+            //node.Avail_OUT.addAll(computeGenSets());
 
             for(CFGNode succNode : node.SUCCESSORS){
-
+                boolean propagateFlag = true;
+                if(propagateFlag){
+                    succNode.Avail_IN.addAll(node.Avail_OUT);
+                    worklist.addLast(succNode);
+                    visited.add(succNode);
+                }
             }
-            break;
         }
     }
 
