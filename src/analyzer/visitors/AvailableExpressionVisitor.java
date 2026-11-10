@@ -18,8 +18,8 @@ public class AvailableExpressionVisitor implements ParserVisitor {
     private final ArrayList<CFGNode> CFG = new ArrayList<>();
 
     // TODO: Choisir la structure de donnée pour votre algorithme
-    //private final ... worklist = new ...;
-    //private final ... visited = new ...;
+    private final ArrayDeque<CFGNode> worklist = new ArrayDeque<>();
+    private final ArrayList<CFGNode> visited = new ArrayList<>();
 
     // Ne pas modifier
     private final Map<String, CFGNode> IF_LABEL_LINK = new HashMap<>();
@@ -185,6 +185,23 @@ public class AvailableExpressionVisitor implements ParserVisitor {
      */
     private void computeAvailableExpr() {
         // TODO
+        CFGNode entryNode = CFG.get(0);
+        CFG.remove(0);
+
+        visited.add(entryNode);
+        worklist.addLast(entryNode);
+
+        CFGNode node;
+        while(!worklist.isEmpty()){
+            node = worklist.removeFirst();
+
+            // OUT [ node ] = GEN [ node ] ∪ ( IN [ node ] - KILL [ node ])
+
+            for(CFGNode succNode : node.SUCCESSORS){
+
+            }
+            break;
+        }
     }
 
     /**
