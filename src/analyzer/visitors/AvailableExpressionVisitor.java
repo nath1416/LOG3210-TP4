@@ -3,6 +3,7 @@ package analyzer.visitors;
 import analyzer.ast.*;
 
 import java.io.PrintWriter;
+import java.lang.reflect.Array;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -186,16 +187,25 @@ public class AvailableExpressionVisitor implements ParserVisitor {
     private void computeAvailableExpr() {
         // TODO
         CFGNode entryNode = CFG.get(0);
-        CFG.remove(0);
+        ArrayList<CFGNode> copyCfg = new ArrayList<>(CFG);
+        copyCfg.remove(0);
 
         visited.add(entryNode);
         worklist.addLast(entryNode);
-
+        System.out.println(entryNode);
+        CFG.forEach(System.out::println);
+        Expression expr = new Expression(entryNode.left, entryNode.op,entryNode.right);
+        entryNode.Avail_OUT.add(expr);
         CFGNode node;
         while(!worklist.isEmpty()){
             node = worklist.removeFirst();
 
+            expr = new Expression(node.left, node.op,node.right);
+
             // OUT [ node ] = GEN [ node ] ∪ ( IN [ node ] - KILL [ node ])
+
+            node.Avail_OUT.add(expr);
+            node.Avail_OUT.addAll(node.Avail_IN);
             //node.Avail_OUT.addAll(computeGenSets());
 
             for(CFGNode succNode : node.SUCCESSORS){
@@ -280,6 +290,21 @@ public class AvailableExpressionVisitor implements ParserVisitor {
 
         public boolean isIfStmt(){
             return this.op.equals("if");
+        }
+        @Override
+        public String toString() {
+            return "CFGNode{" +
+                    "op='" + op + '\'' +
+                    ", ASSIGN='" + ASSIGN + '\'' +
+                    ", left='" + left + '\'' +
+                    ", right='" + right + '\'' +
+                    ", GEN=" + GEN +
+                    ", KILL=" + KILL +
+                    ", Avail_IN=" + Avail_IN +
+                    ", Avail_OUT=" + Avail_OUT +
+                    ", PREDECESSORS=" + PREDECESSORS.size() +
+                    ", SUCCESSORS=" + SUCCESSORS.size() +
+                    '}';
         }
     }
 
