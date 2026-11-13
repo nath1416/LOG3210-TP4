@@ -171,6 +171,9 @@ public class ReachingDefinitionsVisitor implements ParserVisitor {
 
     private void computeGenSets() {
         // TODO
+        for (CFGNode node : CFG) {
+            node.GEN = new Definition(node.op, node.ASSIGN, node.left, node.right);
+        }
     }
 
     /**
@@ -178,6 +181,19 @@ public class ReachingDefinitionsVisitor implements ParserVisitor {
      */
     private void computeKillSets() {
         // TODO
+        for (CFGNode node : CFG) {
+            node.KILL.clear();
+
+            if (node.isIfStmt()) {
+                continue;
+            }
+
+            for (CFGNode otherNode : CFG) {
+                if (otherNode != node && !otherNode.isIfStmt() && otherNode.ASSIGN.equals(node.ASSIGN)) {
+                    node.KILL.add(otherNode.GEN);
+                }
+            }
+        }
     }
 
     /**
