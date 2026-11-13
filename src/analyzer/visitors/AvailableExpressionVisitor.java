@@ -268,21 +268,23 @@ public class AvailableExpressionVisitor implements ParserVisitor {
      */
     private void eliminateCommonExpression() {
         // TODO
-        for (CFGNode node : CFG) {
-           if (node.isIfStmt() || node.right.isEmpty()) continue;
+        for (int i = 0; i < CFG.size(); i++) {
+            CFGNode node = CFG.get(i);
+            if (node.isIfStmt() || node.right.isEmpty()) continue;
 
-           Expression expr = new Expression(node.left, node.op, node.right);
-           if (!node.Avail_IN.contains(expr)) continue;
+            Expression expr = new Expression(node.left, node.op, node.right);
+            if (!node.Avail_IN.contains(expr)) continue;
 
-           // Chercher la variable qui contient déjà l'expression
-           for (CFGNode otherNode : CFG) {
-               if (otherNode != node && otherNode.GEN.contains(expr)) {
-                   node.left = otherNode.ASSIGN;
-                   node.op = "+";
-                   node.right = "";
-                   break;
-               }
-           }
+            for (int j = i - 1; j >= 0; j--) {
+                CFGNode otherNode = CFG.get(j);
+                if (otherNode.GEN.contains(expr)) {
+                    node.left = otherNode.ASSIGN;
+                    node.op = "+";
+                    node.right = "";
+                    node.GEN.clear();
+                    break;
+                }
+            }
         }
     }
 
