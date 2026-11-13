@@ -18,8 +18,9 @@ public class ReachingDefinitionsVisitor implements ParserVisitor {
     private ArrayList<CFGNode> CFG = new ArrayList<>();
 
     // TODO: Choisir la structure de donnée pour votre algorithme
-    //private final ... worklist = new ...;
-    //private final ... visited = new ...;
+
+    private final ArrayDeque<CFGNode> worklist = new ArrayDeque<>();
+    private final Set<CFGNode> visited = new HashSet<>();
 
     // Ne pas modifier
     private final Map<String, CFGNode> IF_LABEL_LINK = new HashMap<>();
@@ -183,7 +184,51 @@ public class ReachingDefinitionsVisitor implements ParserVisitor {
      * Computes the Reaching Definitions Analysis for the code.
      */
     private void computeReachingDefinitions() {
+        computeGenSets();
+        computeKillSets();
+
         // TODO
+        visited.clear();
+        worklist.clear();
+
+        if (CFG.isEmpty()) {
+            return;
+        }
+
+        // IN[node] = U, OUT[node] = U
+        for (CFGNode node : CFG) {
+            node.ValDef_IN = new HashSet<>();
+            node.ValDef_OUT = new HashSet<>();
+        }
+
+        // IN[entry] = ∅
+        CFGNode entryNode = CFG.get(0);
+        visited.add(entryNode);
+        worklist.addLast(entryNode);
+
+        while (!worklist.isEmpty()) {
+            CFGNode node = worklist.removeFirst();
+
+            // OUT[node] = GEN[node] ∪ (IN[node] - KILL[node])
+            Set<Definition> out = new HashSet<>(node.ValDef_IN);
+            out.removeAll(node.KILL);
+            if (node.GEN != null)  {
+                out.add(node.GEN);
+            }
+            node.ValDef_OUT = out;
+
+            for (CFGNode succNode : node.SUCCESSORS) {
+                // propagateFlag = (IN[succNode] ⊄ OUT[node]) ∨ ¬visited.contains(succ)
+                boolean propagate = !node.ValDef_OUT.containsAll(succNode.ValDef_IN)
+                        || !visited.contains(succNode);
+                if (propagate) {
+                    // IN[succNode] = IN[succNode] ∪ OUT[node]
+                    succNode.ValDef_IN.addAll(node.ValDef_OUT);
+                    worklist.addFirst(succNode); //LIFO
+                    visited.add(succNode);
+                }
+            }
+        }
     }
 
     /**
