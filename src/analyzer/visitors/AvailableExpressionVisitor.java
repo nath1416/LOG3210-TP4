@@ -226,11 +226,25 @@ public class AvailableExpressionVisitor implements ParserVisitor {
             node.Avail_OUT = in;
 
             for (CFGNode succNode : node.SUCCESSORS) {
-                boolean propagateFlag = true;
+                Set<Expression> newIn;
+                if (!visited.contains(succNode)) {
+                    newIn = new HashSet<>(node.Avail_OUT);
+                } else {
+                    // IN[succ] = IN[succ] ∩ OUT[node]
+                    newIn = new HashSet<>(succNode.Avail_IN);
+                    newIn.retainAll(node.Avail_OUT);
+                }
+
+                boolean propagateFlag = !newIn.equals(succNode.Avail_IN) || !visited.contains(succNode);
+
                 if (propagateFlag) {
-                    succNode.Avail_IN.addAll(node.Avail_OUT);
-                    worklist.addLast(succNode);
-                    visited.add(succNode);
+                    succNode.Avail_IN = newIn;
+                    if (!visited.contains(succNode)) {
+                        visited.add(succNode);
+                    }
+                    if (!worklist.contains(succNode)) {
+                        worklist.addLast(succNode);
+                    }
                 }
             }
         }
