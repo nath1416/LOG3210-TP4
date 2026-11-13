@@ -12,7 +12,8 @@ import java.util.stream.Collectors;
  * The visitor class traverses an abstract syntax tree (AST) and generates optimised code (Common expression elimination).
  * The code includes implementations for various types of assignment statements, such as direct assignment,
  * unary assignment, and assignment with arithmetic operations.
- * */
+ *
+ */
 public class AvailableExpressionVisitor implements ParserVisitor {
     private PrintWriter m_writer = null;
     private final ArrayList<String> RETURNS = new ArrayList<>();
@@ -60,7 +61,7 @@ public class AvailableExpressionVisitor implements ParserVisitor {
     @Override
     public Object visit(ASTBlock node, Object data) {
         Set<CFGNode> predecessors = new HashSet<>();
-        for(int i = 0; i < node.jjtGetNumChildren(); i++){
+        for (int i = 0; i < node.jjtGetNumChildren(); i++) {
             predecessors = (Set<CFGNode>) node.jjtGetChild(i).jjtAccept(this, predecessors);
         }
         return null;
@@ -158,8 +159,8 @@ public class AvailableExpressionVisitor implements ParserVisitor {
     }
 
     private void fillSuccessors() {
-        for (CFGNode node : CFG){
-            for(CFGNode pred : node.PREDECESSORS){
+        for (CFGNode node : CFG) {
+            for (CFGNode pred : node.PREDECESSORS) {
                 pred.SUCCESSORS.add(node);
             }
         }
@@ -170,8 +171,12 @@ public class AvailableExpressionVisitor implements ParserVisitor {
     /**
      * Computes the GEN sets for each line of code.
      */
-    public void computeGenSets(){
+    public void computeGenSets() {
         // TODO
+        for (CFGNode node : CFG) {
+            Expression expr = new Expression(node.left, node.op, node.right);
+            node.GEN.add(expr);
+        }
     }
 
     /**
@@ -179,12 +184,26 @@ public class AvailableExpressionVisitor implements ParserVisitor {
      */
     public void computeKillSets() {
         // TODO
+        for (CFGNode node : CFG) {
+            for (CFGNode otherNode : CFG) {
+                if (node.equals(otherNode)) {
+                    continue;
+                }
+
+                if (otherNode.right.equals(node.ASSIGN) || otherNode.left.equals(node.ASSIGN)) {
+                    node.KILL.add(new Expression(otherNode.left, otherNode.op, otherNode.right));
+                }
+            }
+        }
     }
 
     /**
      * Computes the Available Expression Analysis for the code.
      */
     private void computeAvailableExpr() {
+        computeGenSets();
+        computeKillSets();
+
         // TODO
         CFGNode entryNode = CFG.get(0);
         ArrayList<CFGNode> copyCfg = new ArrayList<>(CFG);
@@ -192,25 +211,23 @@ public class AvailableExpressionVisitor implements ParserVisitor {
 
         visited.add(entryNode);
         worklist.addLast(entryNode);
-        System.out.println(entryNode);
+
         CFG.forEach(System.out::println);
-        Expression expr = new Expression(entryNode.left, entryNode.op,entryNode.right);
-        entryNode.Avail_OUT.add(expr);
+
         CFGNode node;
-        while(!worklist.isEmpty()){
+        while (!worklist.isEmpty()) {
             node = worklist.removeFirst();
 
-            expr = new Expression(node.left, node.op,node.right);
+            Set<Expression> in = new HashSet<>(node.Avail_IN);
 
-            // OUT [ node ] = GEN [ node ] ∪ ( IN [ node ] - KILL [ node ])
+            // OUT[node] = GEN[node] ∪ (IN[node] - KILL[node])
+            in.removeAll(node.KILL);
+            in.addAll(node.GEN);
+            node.Avail_OUT = in;
 
-            node.Avail_OUT.add(expr);
-            node.Avail_OUT.addAll(node.Avail_IN);
-            //node.Avail_OUT.addAll(computeGenSets());
-
-            for(CFGNode succNode : node.SUCCESSORS){
+            for (CFGNode succNode : node.SUCCESSORS) {
                 boolean propagateFlag = true;
-                if(propagateFlag){
+                if (propagateFlag) {
                     succNode.Avail_IN.addAll(node.Avail_OUT);
                     worklist.addLast(succNode);
                     visited.add(succNode);
@@ -234,7 +251,7 @@ public class AvailableExpressionVisitor implements ParserVisitor {
         int i = 0;
         for (CFGNode code : CFG) {
             String line;
-            if (code.isIfStmt()){
+            if (code.isIfStmt()) {
                 line = "if " + code.left + " goto " + code.right;
             } else {
                 line = code.ASSIGN + " = " + code.left;
@@ -288,9 +305,10 @@ public class AvailableExpressionVisitor implements ParserVisitor {
             this.SUCCESSORS = new HashSet<>();
         }
 
-        public boolean isIfStmt(){
+        public boolean isIfStmt() {
             return this.op.equals("if");
         }
+
         @Override
         public String toString() {
             return "CFGNode{" +
