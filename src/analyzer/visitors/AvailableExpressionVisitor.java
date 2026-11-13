@@ -21,7 +21,7 @@ public class AvailableExpressionVisitor implements ParserVisitor {
 
     // TODO: Choisir la structure de donnée pour votre algorithme
     private final ArrayDeque<CFGNode> worklist = new ArrayDeque<>();
-    private final ArrayList<CFGNode> visited = new ArrayList<>();
+    private final Set<CFGNode> visited = new HashSet<>();
 
     // Ne pas modifier
     private final Map<String, CFGNode> IF_LABEL_LINK = new HashMap<>();
@@ -174,8 +174,15 @@ public class AvailableExpressionVisitor implements ParserVisitor {
     public void computeGenSets() {
         // TODO
         for (CFGNode node : CFG) {
-            Expression expr = new Expression(node.left, node.op, node.right);
-            node.GEN.add(expr);
+            node.GEN.clear();
+            if (node.isIfStmt() || node.right.isEmpty()) {
+                continue;
+            }
+
+            if (node.left.equals(node.ASSIGN) || node.right.equals(node.ASSIGN)) {
+                continue;
+            }
+            node.GEN.add(new Expression(node.left, node.op, node.right));
         }
     }
 
@@ -185,12 +192,15 @@ public class AvailableExpressionVisitor implements ParserVisitor {
     public void computeKillSets() {
         // TODO
         for (CFGNode node : CFG) {
-            for (CFGNode otherNode : CFG) {
-                if (node.equals(otherNode)) {
-                    continue;
-                }
+            node.KILL.clear();
+            if (node.isIfStmt()) {
+                continue;
+            }
 
-                if (otherNode.right.equals(node.ASSIGN) || otherNode.left.equals(node.ASSIGN)) {
+            for (CFGNode otherNode : CFG) {
+                if (!otherNode.isIfStmt()
+                        && !otherNode.right.isEmpty()
+                        && (otherNode.left.equals(node.ASSIGN) || otherNode.right.equals(node.ASSIGN))) {
                     node.KILL.add(new Expression(otherNode.left, otherNode.op, otherNode.right));
                 }
             }
@@ -205,46 +215,49 @@ public class AvailableExpressionVisitor implements ParserVisitor {
         computeKillSets();
 
         // TODO
-        CFGNode entryNode = CFG.get(0);
-        ArrayList<CFGNode> copyCfg = new ArrayList<>(CFG);
-        copyCfg.remove(0);
+        visited.clear();
+        worklist.clear();
 
+        if (CFG.isEmpty()) {
+            return;
+        }
+
+        // U = ensemble de toutes les expressions du programme
+        Set<Expression> universe = new HashSet<>();
+        for (CFGNode node : CFG) {
+            universe.addAll(node.GEN);
+        }
+
+        // IN[node] = U, OUT[node] = U
+        for (CFGNode node : CFG) {
+            node.Avail_IN = new HashSet<>(universe);
+            node.Avail_OUT = new HashSet<>(universe);
+        }
+
+        // IN[entry] = ∅
+        CFGNode entryNode = CFG.get(0);
+        entryNode.Avail_IN = new HashSet<>();
         visited.add(entryNode);
         worklist.addLast(entryNode);
 
-        CFG.forEach(System.out::println);
-
-        CFGNode node;
         while (!worklist.isEmpty()) {
-            node = worklist.removeFirst();
-
-            Set<Expression> in = new HashSet<>(node.Avail_IN);
+            CFGNode node = worklist.removeFirst();
 
             // OUT[node] = GEN[node] ∪ (IN[node] - KILL[node])
-            in.removeAll(node.KILL);
-            in.addAll(node.GEN);
-            node.Avail_OUT = in;
+            Set<Expression> out = new HashSet<>(node.Avail_IN);
+            out.removeAll(node.KILL);
+            out.addAll(node.GEN);
+            node.Avail_OUT = out;
 
             for (CFGNode succNode : node.SUCCESSORS) {
-                Set<Expression> newIn;
-                if (!visited.contains(succNode)) {
-                    newIn = new HashSet<>(node.Avail_OUT);
-                } else {
-                    // IN[succ] = IN[succ] ∩ OUT[node]
-                    newIn = new HashSet<>(succNode.Avail_IN);
-                    newIn.retainAll(node.Avail_OUT);
-                }
-
-                boolean propagateFlag = !newIn.equals(succNode.Avail_IN) || !visited.contains(succNode);
-
-                if (propagateFlag) {
-                    succNode.Avail_IN = newIn;
-                    if (!visited.contains(succNode)) {
-                        visited.add(succNode);
-                    }
-                    if (!worklist.contains(succNode)) {
-                        worklist.addLast(succNode);
-                    }
+                // propagateFlag = (IN[succNode] ⊄ OUT[node]) ∨ ¬visited.contains(succ)
+                boolean propagate = !node.Avail_OUT.containsAll(succNode.Avail_IN)
+                        || !visited.contains(succNode);
+                if (propagate) {
+                    // IN[succNode] = IN[succNode] ∩ OUT[node]
+                    succNode.Avail_IN.retainAll(node.Avail_OUT);
+                    worklist.addLast(succNode);
+                    visited.add(succNode);
                 }
             }
         }
@@ -257,9 +270,7 @@ public class AvailableExpressionVisitor implements ParserVisitor {
         // TODO
     }
 
-
     /* ======= Fin: Section à modifier ========= */
-
 
     public void printCode() {
         int i = 0;
