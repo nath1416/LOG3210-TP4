@@ -11,11 +11,12 @@ import java.util.stream.Collectors;
  * The visitor class traverses an abstract syntax tree (AST) and generates optimised code (Single Assignment and
  * Dead-code elimination). The code includes implementations for various types of assignment statements,
  * such as direct assignment, unary assignment, and assignment with arithmetic operations.
- * */
+ *
+ */
 public class ReachingDefinitionsVisitor implements ParserVisitor {
     private PrintWriter m_writer = null;
     private final ArrayList<String> RETURNS = new ArrayList<>();
-    private ArrayList<CFGNode> CFG = new ArrayList<>();
+    private final ArrayList<CFGNode> CFG = new ArrayList<>();
 
     // TODO: Choisir la structure de donnée pour votre algorithme
 
@@ -40,7 +41,7 @@ public class ReachingDefinitionsVisitor implements ParserVisitor {
         node.childrenAccept(this, null);
 
         fillSuccessors();
-        
+
         computeReachingDefinitions();
         printCode();
 
@@ -62,7 +63,7 @@ public class ReachingDefinitionsVisitor implements ParserVisitor {
     @Override
     public Object visit(ASTBlock node, Object data) {
         Set<CFGNode> predecessors = new HashSet<>();
-        for(int i = 0; i < node.jjtGetNumChildren(); i++){
+        for (int i = 0; i < node.jjtGetNumChildren(); i++) {
             predecessors = (Set<CFGNode>) node.jjtGetChild(i).jjtAccept(this, predecessors);
         }
         return null;
@@ -160,8 +161,8 @@ public class ReachingDefinitionsVisitor implements ParserVisitor {
     }
 
     private void fillSuccessors() {
-        for (CFGNode node : CFG){
-            for(CFGNode pred : node.PREDECESSORS){
+        for (CFGNode node : CFG) {
+            for (CFGNode pred : node.PREDECESSORS) {
                 pred.SUCCESSORS.add(node);
             }
         }
@@ -228,7 +229,7 @@ public class ReachingDefinitionsVisitor implements ParserVisitor {
             // OUT[node] = GEN[node] ∪ (IN[node] - KILL[node])
             Set<Definition> out = new HashSet<>(node.ValDef_IN);
             out.removeAll(node.KILL);
-            if (node.GEN != null)  {
+            if (node.GEN != null) {
                 out.add(node.GEN);
             }
             node.ValDef_OUT = out;
@@ -251,8 +252,32 @@ public class ReachingDefinitionsVisitor implements ParserVisitor {
      * Optimizes the code by eliminating unnecessary assignments.
      */
     public void computeSingleAssignment() {
-        // TODO
+        Set<Definition> used = new HashSet<>();
+
+        for (CFGNode node : CFG) {
+            for (Definition d : node.ValDef_IN) {
+                if (d.ASSIGN.isEmpty()) {
+                    continue;
+                }
+
+                boolean reads = d.ASSIGN.equals(node.left) || (!node.isIfStmt() && d.ASSIGN.equals(node.right));
+                if (reads) {
+                    used.add(d);
+                }
+            }
+
+            if (node.SUCCESSORS.isEmpty()) {
+                for (Definition d : node.ValDef_OUT) {
+                    if (RETURNS.contains(d.ASSIGN)) {
+                        used.add(d);
+                    }
+                }
+            }
+        }
+
+        CFG.removeIf(n -> !n.isIfStmt() && !used.contains(n.GEN));
     }
+
 
     /**
      * Eliminates dead code from the code.
@@ -268,7 +293,7 @@ public class ReachingDefinitionsVisitor implements ParserVisitor {
         int i = 0;
         for (CFGNode code : CFG) {
             String line;
-            if (code.isIfStmt()){
+            if (code.isIfStmt()) {
                 line = "if " + code.left + " goto " + code.right;
             } else {
                 line = code.ASSIGN + " = " + code.left;
@@ -289,7 +314,7 @@ public class ReachingDefinitionsVisitor implements ParserVisitor {
         m_writer.println("###############################################");
         m_writer.println("Optimised code:");
         for (CFGNode code : CFG) {
-            String line =  code.GEN + ": " + code.ASSIGN + " = " + code.left;
+            String line = code.GEN + ": " + code.ASSIGN + " = " + code.left;
             if (!code.right.isEmpty()) {
                 line += " " + code.op + " " + code.right;
             }
@@ -334,10 +359,11 @@ public class ReachingDefinitionsVisitor implements ParserVisitor {
             this.SUCCESSORS = new HashSet<>();
         }
 
-        public boolean isIfStmt(){
+        public boolean isIfStmt() {
             return this.op.equals("if");
         }
     }
+
     public int statementNumber = 0;
 
     /**
