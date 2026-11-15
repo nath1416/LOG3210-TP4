@@ -283,33 +283,50 @@ public class ReachingDefinitionsVisitor implements ParserVisitor {
      * Eliminates dead code from the code.
      */
     public void eliminateDeadCode() {
-        // TODO
         if (RETURNS.isEmpty()) {
             CFG.clear();
             return;
         }
 
-        Stack<String> stack = new Stack<>();
-        ArrayList<CFGNode> visited = new ArrayList<>();
-        stack.addAll(RETURNS);
+        Map<Definition, CFGNode> defOwner = new HashMap<>();
+        for (CFGNode n : CFG) {
+            if (n.GEN != null) defOwner.put(n.GEN, n);
+        }
+
+        Deque<CFGNode> stack = new ArrayDeque<>();
+        Set<CFGNode> visited = new HashSet<>();
+
+        for (CFGNode n : CFG) {
+            if (n.isIfStmt() && visited.add(n)) stack.push(n);
+        }
+
+        for (CFGNode n : CFG) {
+            if (!n.SUCCESSORS.isEmpty()) continue;
+            for (Definition d : n.ValDef_OUT) {
+                CFGNode owner = defOwner.get(d);
+                if (owner != null && RETURNS.contains(d.ASSIGN) && visited.add(owner)) {
+                    stack.push(owner);
+                }
+            }
+        }
 
         while (!stack.isEmpty()) {
-            String var = stack.pop();
-            List<CFGNode> nodes = CFG.stream()
-                    .filter(n -> Objects.equals(n.ASSIGN, var))
-                    .collect(Collectors.toList());
+            CFGNode node = stack.pop();
 
-            nodes.forEach((n) -> {
-                if (!visited.contains(n)) {
-                    visited.add(n);
-                    stack.push(n.right);
-                    stack.push(n.left);
+            for (Definition d : node.ValDef_IN) {
+                CFGNode owner = defOwner.get(d);
+                if (owner == null || owner.isIfStmt()) continue;
+
+                boolean reads = d.ASSIGN.equals(node.left)
+                        || (!node.isIfStmt() && d.ASSIGN.equals(node.right));
+
+                if (reads && visited.add(owner)) {
+                    stack.push(owner);
                 }
-            });
-
+            }
         }
-        CFG.retainAll(visited);
 
+        CFG.retainAll(visited);
     }
 
 
