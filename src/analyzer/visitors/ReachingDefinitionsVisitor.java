@@ -284,6 +284,32 @@ public class ReachingDefinitionsVisitor implements ParserVisitor {
      */
     public void eliminateDeadCode() {
         // TODO
+        if (RETURNS.isEmpty()) {
+            CFG.clear();
+            return;
+        }
+
+        Stack<String> stack = new Stack<>();
+        ArrayList<CFGNode> visited = new ArrayList<>();
+        stack.addAll(RETURNS);
+
+        while (!stack.isEmpty()) {
+            String var = stack.pop();
+            List<CFGNode> nodes = CFG.stream()
+                    .filter(n -> Objects.equals(n.ASSIGN, var))
+                    .collect(Collectors.toList());
+
+            nodes.forEach((n) -> {
+                if (!visited.contains(n)) {
+                    visited.add(n);
+                    stack.push(n.right);
+                    stack.push(n.left);
+                }
+            });
+
+        }
+        CFG.retainAll(visited);
+
     }
 
 
