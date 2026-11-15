@@ -173,6 +173,10 @@ public class ReachingDefinitionsVisitor implements ParserVisitor {
     private void computeGenSets() {
         // TODO
         for (CFGNode node : CFG) {
+            if (node.isIfStmt() ) {
+                continue;
+            }
+
             node.GEN = new Definition(node.op, node.ASSIGN, node.left, node.right);
         }
     }
