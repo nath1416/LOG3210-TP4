@@ -14,7 +14,7 @@ import java.util.stream.Collectors;
  *
  */
 public class ReachingDefinitionsVisitor implements ParserVisitor {
-    private PrintWriter m_writer = null;
+    private final PrintWriter m_writer;
     private final ArrayList<String> RETURNS = new ArrayList<>();
     private final ArrayList<CFGNode> CFG = new ArrayList<>();
 
@@ -173,7 +173,9 @@ public class ReachingDefinitionsVisitor implements ParserVisitor {
     private void computeGenSets() {
         // TODO
         for (CFGNode node : CFG) {
-            if (node.isIfStmt() ) {
+            node.GEN = null;
+
+            if (node.isIfStmt()) {
                 continue;
             }
 
@@ -257,29 +259,50 @@ public class ReachingDefinitionsVisitor implements ParserVisitor {
      */
     public void computeSingleAssignment() {
         Set<Definition> used = new HashSet<>();
+        Map<CFGNode, Set<Definition>> leftReaching = new HashMap<>();
+        Map<CFGNode, Set<Definition>> rightReaching = new HashMap<>();
 
         for (CFGNode node : CFG) {
             for (Definition d : node.ValDef_IN) {
-                if (d.ASSIGN.isEmpty()) {
+                if (d.ASSIGN.isEmpty() || node.isIfStmt()) {
                     continue;
                 }
 
-                boolean reads = d.ASSIGN.equals(node.left) || (!node.isIfStmt() && d.ASSIGN.equals(node.right));
-                if (reads) {
+                boolean readsLeft = d.ASSIGN.equals(node.left);
+                boolean readsRight = !node.isIfStmt() && d.ASSIGN.equals(node.right);
+
+                if (readsLeft || readsRight) {
                     used.add(d);
+                }
+                if (readsLeft) {
+                    leftReaching.computeIfAbsent(node, k -> new HashSet<>()).add(d);
+                }
+                if (readsRight) {
+                    rightReaching.computeIfAbsent(node, k -> new HashSet<>()).add(d);
                 }
             }
 
             if (node.SUCCESSORS.isEmpty()) {
-                for (Definition d : node.ValDef_OUT) {
-                    if (RETURNS.contains(d.ASSIGN)) {
-                        used.add(d);
+                for (Definition def : node.ValDef_OUT) {
+                    if (RETURNS.contains(def.ASSIGN)) {
+                        used.add(def);
                     }
                 }
             }
         }
 
         CFG.removeIf(n -> !n.isIfStmt() && !used.contains(n.GEN));
+
+        for (CFGNode node : CFG) {
+            Set<Definition> left = leftReaching.get(node);
+            if (left != null) {
+                node.left = left.iterator().next().identifier;
+            }
+            Set<Definition> r = rightReaching.get(node);
+            if (r != null) {
+                node.right = r.iterator().next().identifier;
+            }
+        }
     }
 
 
@@ -293,20 +316,22 @@ public class ReachingDefinitionsVisitor implements ParserVisitor {
         }
 
         Map<Definition, CFGNode> defOwner = new HashMap<>();
-        for (CFGNode n : CFG) {
-            if (n.GEN != null) defOwner.put(n.GEN, n);
-        }
 
         Deque<CFGNode> stack = new ArrayDeque<>();
         Set<CFGNode> visited = new HashSet<>();
 
-        for (CFGNode n : CFG) {
-            if (n.isIfStmt() && visited.add(n)) stack.push(n);
-        }
+        for (CFGNode node : CFG) {
+            if (node.isIfStmt() && visited.add(node)) {
+                stack.push(node);
+            }
 
-        for (CFGNode n : CFG) {
-            if (!n.SUCCESSORS.isEmpty()) continue;
-            for (Definition d : n.ValDef_OUT) {
+            if (node.GEN != null) {
+                defOwner.put(node.GEN, node);
+            }
+
+            if (!node.SUCCESSORS.isEmpty()) continue;
+
+            for (Definition d : node.ValDef_OUT) {
                 CFGNode owner = defOwner.get(d);
                 if (owner != null && RETURNS.contains(d.ASSIGN) && visited.add(owner)) {
                     stack.push(owner);
@@ -321,8 +346,11 @@ public class ReachingDefinitionsVisitor implements ParserVisitor {
                 CFGNode owner = defOwner.get(d);
                 if (owner == null || owner.isIfStmt()) continue;
 
-                boolean reads = d.ASSIGN.equals(node.left)
-                        || (!node.isIfStmt() && d.ASSIGN.equals(node.right));
+                boolean readsLeft = d.ASSIGN.equals(node.left) || d.identifier.equals(node.left);
+                boolean readsRight = !node.isIfStmt()
+                        && (d.ASSIGN.equals(node.right) || d.identifier.equals(node.right));
+
+                boolean reads = readsLeft || readsRight;
 
                 if (reads && visited.add(owner)) {
                     stack.push(owner);
