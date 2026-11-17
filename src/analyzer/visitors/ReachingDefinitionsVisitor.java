@@ -262,6 +262,7 @@ public class ReachingDefinitionsVisitor implements ParserVisitor {
         Map<CFGNode, Set<Definition>> leftReaching = new HashMap<>();
         Map<CFGNode, Set<Definition>> rightReaching = new HashMap<>();
 
+
         for (CFGNode node : CFG) {
             for (Definition d : node.ValDef_IN) {
                 if (d.ASSIGN.isEmpty() || node.isIfStmt()) {
@@ -329,7 +330,7 @@ public class ReachingDefinitionsVisitor implements ParserVisitor {
                 defOwner.put(node.GEN, node);
             }
 
-            if (!node.SUCCESSORS.isEmpty()) continue;
+       //     if (!node.SUCCESSORS.isEmpty()) continue;
 
             for (Definition d : node.ValDef_OUT) {
                 CFGNode owner = defOwner.get(d);
