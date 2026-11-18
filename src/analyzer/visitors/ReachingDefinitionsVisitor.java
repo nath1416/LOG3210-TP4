@@ -241,8 +241,8 @@ public class ReachingDefinitionsVisitor implements ParserVisitor {
             node.ValDef_OUT = out;
 
             for (CFGNode succNode : node.SUCCESSORS) {
-                // propagateFlag = (IN[succNode] ⊄ OUT[node]) ∨ ¬visited.contains(succ)
-                boolean propagate = !node.ValDef_OUT.containsAll(succNode.ValDef_IN)
+                // propagateFlag = (OUT[node] ⊄ IN[succNode]) ∨ ¬visited.contains(succ)
+                boolean propagate = !succNode.ValDef_IN.containsAll(node.ValDef_OUT)
                         || !visited.contains(succNode);
                 if (propagate) {
                     // IN[succNode] = IN[succNode] ∪ OUT[node]
