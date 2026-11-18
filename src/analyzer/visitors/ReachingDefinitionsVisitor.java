@@ -317,6 +317,11 @@ public class ReachingDefinitionsVisitor implements ParserVisitor {
         }
 
         Map<Definition, CFGNode> defOwner = new HashMap<>();
+        for (CFGNode node : CFG) {
+            if (node.GEN != null) {
+                defOwner.put(node.GEN, node);
+            }
+        }
 
         Deque<CFGNode> stack = new ArrayDeque<>();
         Set<CFGNode> visited = new HashSet<>();
@@ -325,14 +330,22 @@ public class ReachingDefinitionsVisitor implements ParserVisitor {
             if (node.isIfStmt() && visited.add(node)) {
                 stack.push(node);
             }
+        }
 
-            if (node.GEN != null) {
-                defOwner.put(node.GEN, node);
-            }
+        // Vrais nœuds de sortie du graphe d'origine (y compris ceux déjà supprimés du CFG)
+        Set<CFGNode> exits = new HashSet<>();
+        Set<CFGNode> seen = new HashSet<>();
+        Deque<CFGNode> toVisit = new ArrayDeque<>(CFG);
+        while (!toVisit.isEmpty()) {
+            CFGNode n = toVisit.pop();
+            if (!seen.add(n)) continue;
+            if (n.SUCCESSORS.isEmpty()) exits.add(n);
+            toVisit.addAll(n.SUCCESSORS);
+        }
 
-       //     if (!node.SUCCESSORS.isEmpty()) continue;
-
-            for (Definition d : node.ValDef_OUT) {
+        // Racines : définitions des variables retournées qui atteignent la sortie
+        for (CFGNode exit : exits) {
+            for (Definition d : exit.ValDef_OUT) {
                 CFGNode owner = defOwner.get(d);
                 if (owner != null && RETURNS.contains(d.ASSIGN) && visited.add(owner)) {
                     stack.push(owner);
